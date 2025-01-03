@@ -5,6 +5,9 @@ from django.http import JsonResponse
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.db.models import Max
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+
 
 @api_view(['GET'])
 def product_list(request):
@@ -34,3 +37,17 @@ def product_info(request):
         'max_price': products.aggregate(max_price= Max('price'))['max_price']
     })
     return Response(serializer.data)
+
+class ProductListAPIView(generics.ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+
+class UserOrdersListAPIView(generics.ListAPIView):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(user=self.request.user)
